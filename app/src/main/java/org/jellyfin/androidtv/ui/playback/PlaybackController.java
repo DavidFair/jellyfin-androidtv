@@ -505,47 +505,8 @@ public class PlaybackController {
                 if (isLiveTv) mSeekPosition = -1;
 
                 //Build options for each player
-                VideoOptions vlcOptions = new VideoOptions();
-                vlcOptions.setItemId(item.getId());
-                vlcOptions.setMediaSources(item.getMediaSources());
-                vlcOptions.setMaxBitrate(Utils.getMaxBitrate());
-                if (vlcErrorEncountered) {
-                    Timber.i("*** Disabling direct play/stream due to previous error");
-                    vlcOptions.setEnableDirectStream(false);
-                    vlcOptions.setEnableDirectPlay(false);
-                }
-                vlcOptions.setSubtitleStreamIndex(forcedSubtitleIndex);
-                vlcOptions.setMediaSourceId(forcedSubtitleIndex != null ? getCurrentMediaSource().getId() : null);
-                DeviceProfile vlcProfile = new LibVlcProfile(isLiveTv);
-                vlcOptions.setProfile(vlcProfile);
-
-                VideoOptions internalOptions = new VideoOptions();
-                internalOptions.setItemId(item.getId());
-                internalOptions.setMediaSources(item.getMediaSources());
-                internalOptions.setMaxBitrate(Utils.getMaxBitrate());
-                if (exoErrorEncountered || (isLiveTv && !directStreamLiveTv))
-                    internalOptions.setEnableDirectStream(false);
-                internalOptions.setMaxAudioChannels(Utils.downMixAudio() ? 2 : null); //have to downmix at server
-                internalOptions.setSubtitleStreamIndex(forcedSubtitleIndex);
-                internalOptions.setMediaSourceId(forcedSubtitleIndex != null ? getCurrentMediaSource().getId() : null);
-                DeviceProfile internalProfile = new BaseProfile();
-                if (DeviceUtils.is60() || userPreferences.getValue().get(UserPreferences.Companion.getAc3Enabled())) {
-                    boolean hlsSupported = false;
-                    if (mFragment != null)
-                        hlsSupported = mFragment.getServerVersionEqualOrGreater(new ServerVersion(10, 8, 0, null));
-                    Timber.d("HLS is %s", hlsSupported ? "allowed" : "disabled");
-
-                    internalProfile = new ExoPlayerProfile(
-                            isLiveTv,
-                            userPreferences.getValue().get(UserPreferences.Companion.getLiveTvDirectPlayEnabled()),
-                            userPreferences.getValue().get(UserPreferences.Companion.getAc3Enabled()),
-                            hlsSupported
-                    );
-                    Timber.i("*** Using extended Exoplayer profile options");
-                } else {
-                    Timber.i("*** Using default android profile");
-                }
-                internalOptions.setProfile(internalProfile);
+                VideoOptions vlcOptions = buildVLCOptions(forcedSubtitleIndex, item);
+                VideoOptions internalOptions = buildExoPlayerOptions(forcedSubtitleIndex, item);
 
                 Timber.d("Max bitrate is: %d", Utils.getMaxBitrate());
 
@@ -562,6 +523,56 @@ public class PlaybackController {
 
                 break;
         }
+    }
+
+    @NonNull
+    private VideoOptions buildExoPlayerOptions(@Nullable Integer forcedSubtitleIndex, BaseItemDto item) {
+        VideoOptions internalOptions = new VideoOptions();
+        internalOptions.setItemId(item.getId());
+        internalOptions.setMediaSources(item.getMediaSources());
+        internalOptions.setMaxBitrate(Utils.getMaxBitrate());
+        if (exoErrorEncountered || (isLiveTv && !directStreamLiveTv))
+            internalOptions.setEnableDirectStream(false);
+        internalOptions.setMaxAudioChannels(Utils.downMixAudio() ? 2 : null); //have to downmix at server
+        internalOptions.setSubtitleStreamIndex(forcedSubtitleIndex);
+        internalOptions.setMediaSourceId(forcedSubtitleIndex != null ? getCurrentMediaSource().getId() : null);
+        DeviceProfile internalProfile = new BaseProfile();
+        if (DeviceUtils.is60() || userPreferences.getValue().get(UserPreferences.Companion.getAc3Enabled())) {
+            boolean hlsSupported = false;
+            if (mFragment != null)
+                hlsSupported = mFragment.getServerVersionEqualOrGreater(new ServerVersion(10, 8, 0, null));
+            Timber.d("HLS is %s", hlsSupported ? "allowed" : "disabled");
+
+            internalProfile = new ExoPlayerProfile(
+                    isLiveTv,
+                    userPreferences.getValue().get(UserPreferences.Companion.getLiveTvDirectPlayEnabled()),
+                    userPreferences.getValue().get(UserPreferences.Companion.getAc3Enabled()),
+                    hlsSupported
+            );
+            Timber.i("*** Using extended Exoplayer profile options");
+        } else {
+            Timber.i("*** Using default android profile");
+        }
+        internalOptions.setProfile(internalProfile);
+        return internalOptions;
+    }
+
+    @NonNull
+    private VideoOptions buildVLCOptions(@Nullable Integer forcedSubtitleIndex, BaseItemDto item) {
+        VideoOptions vlcOptions = new VideoOptions();
+        vlcOptions.setItemId(item.getId());
+        vlcOptions.setMediaSources(item.getMediaSources());
+        vlcOptions.setMaxBitrate(Utils.getMaxBitrate());
+        if (vlcErrorEncountered) {
+            Timber.i("*** Disabling direct play/stream due to previous error");
+            vlcOptions.setEnableDirectStream(false);
+            vlcOptions.setEnableDirectPlay(false);
+        }
+        vlcOptions.setSubtitleStreamIndex(forcedSubtitleIndex);
+        vlcOptions.setMediaSourceId(forcedSubtitleIndex != null ? getCurrentMediaSource().getId() : null);
+        DeviceProfile vlcProfile = new LibVlcProfile(isLiveTv);
+        vlcOptions.setProfile(vlcProfile);
+        return vlcOptions;
     }
 
     public int getBufferAmount() {

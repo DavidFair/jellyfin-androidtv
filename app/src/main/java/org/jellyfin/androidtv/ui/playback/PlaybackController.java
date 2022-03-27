@@ -172,7 +172,7 @@ public class PlaybackController {
         }
     }
 
-    public void setPlaybackSpeed(@NonNull float speed) {
+    public void setPlaybackSpeed(float speed) {
         mRequestedPlaybackSpeed = speed;
         if (hasInitializedVideoManager()) {
             mVideoManager.setPlaybackSpeed(speed);
